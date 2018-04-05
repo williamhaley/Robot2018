@@ -6,8 +6,11 @@ import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.RobotDrive;
 import edu.wpi.first.wpilibj.SampleRobot;
 import edu.wpi.cscore.UsbCamera;
+import edu.wpi.first.wpilibj.AnalogAccelerometer;
+import edu.wpi.first.wpilibj.AnalogGyro;
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Timer;
@@ -62,26 +65,35 @@ public class Robot extends SampleRobot {
 	double flywheelSpeed = 0.4;
     double flywheelSpeedLaunch = 1;
     double flywheelSpeedIntake = 0.7;
-	
+	double Kp = 0.03;
+
+	//boolean for certain mechanisms
     boolean stopFlyWheels = true;
 	boolean speedReduced = false;
 	boolean pneumaticOpenClose = false;
 	boolean launchCube = true;
 	
+	//joystick instantiation
     Joystick stick = new Joystick(2);
     Joystick stick2 = new Joystick(0);
     
-    Spark forkLiftMech;
-    Spark fly1;
-    Spark fly2;
-    Talon back_Left;
-    Talon front_Left;
-    SpeedControllerGroup m_Left;
-    //Right Motors
-    Talon back_Right;
-    Talon front_Right;
-    SpeedControllerGroup m_Right;
-    DifferentialDrive m_drive;
+    //limit switch
+    DigitalInput forwardLimitSwitch, reverseLimitSwitch;
+    double output;
+    
+    //motor variable instantiation// Actual instantiation happens in Robot.ini
+    	Spark forkLiftMech;
+    	Spark fly1;
+    	Spark fly2;
+    	Talon back_Left;
+    	Talon front_Left;
+    	SpeedControllerGroup m_Left;
+    	Talon back_Right;
+    	Talon front_Right;
+    	SpeedControllerGroup m_Right;
+    	//DifferentialDrive m_drive;
+    
+    //pneumatics instantiation
     DoubleSolenoid sol1;
     Compressor c;
     //c.setClosedLoopControl(true);
@@ -91,38 +103,11 @@ public class Robot extends SampleRobot {
     double current;
     UsbCamera cam0;
     
-    /**
-    // number in parenthesis for Talon, Servo, and Spark constructor are PWM ports on roborio
-    //Left Motors
-    Talon back_Left = new Talon(2);
-    Talon front_Left = new Talon(3);
-    SpeedControllerGroup m_Left = new SpeedControllerGroup(back_Left, front_Left);
-    //Right Motors
-    Talon back_Right= new Talon(1);
-    Talon front_Right = new Talon(0);
-    SpeedControllerGroup m_Right = new SpeedControllerGroup(back_Right, front_Right);
-    //Instantiate Differential Drive
-    DifferentialDrive m_drive = new DifferentialDrive(m_Left, m_Right);
-    
-    //Other motors 
-    Spark forkLiftMech = new Spark(6);
-    
-    Spark fly1 = new Spark(4); //left 
-    Spark fly2 = new Spark(5); //right
-    
-    
-    //parameter is nodeid of the solenoids & compressor 
-    DoubleSolenoid sol1 = new DoubleSolenoid(4,5);
-    Compressor c = new Compressor(0);
-    //c.setClosedLoopControl(true);
-    //sets up the compressor setting/status
-    boolean enabled = c.enabled();
-    boolean pressureSwitch = c.getPressureSwitchValue();
-    double current = c.getCompressorCurrent();
-    **/
+    AnalogGyro gyro;
+    AnalogAccelerometer accel;
 
     // sets RobotDrive obj to null so that auto code works
-    RobotDrive arcadeDrive = null;
+    DifferentialDrive m_drive = null;
     
     // variable to handle initialization of Robot Drive obj//i.e., on or off?
     boolean initRobotDrive;
@@ -142,15 +127,17 @@ public class Robot extends SampleRobot {
     	UsbCamera cam0 = CameraServer.getInstance().startAutomaticCapture(0);
         cam0.setResolution(320, 240);
         cam0.setFPS(15);
+        // limit switch
+        forwardLimitSwitch = new DigitalInput(1);
         
         //Left Motors
          back_Left = new Talon(2);
          front_Left = new Talon(3);
-         m_Left = new SpeedControllerGroup(back_Left, front_Left);
+         m_Left = new SpeedControllerGroup(front_Left, back_Left);
         //Right Motors
          back_Right= new Talon(1);
          front_Right = new Talon(0);
-         m_Right = new SpeedControllerGroup(back_Right, front_Right);
+         m_Right = new SpeedControllerGroup(front_Right, back_Right);
         //Instantiate Differential Drive
          m_drive = new DifferentialDrive(m_Left, m_Right);
         
@@ -167,18 +154,21 @@ public class Robot extends SampleRobot {
          enabled = c.enabled();
          pressureSwitch = c.getPressureSwitchValue();
          current = c.getCompressorCurrent();
+         //Gyro initilization code
+         gyro = new AnalogGyro(0);
+         //accel = new AnalogAccelerometer(0);
+         gyro.initGyro();
+         gyro.calibrate();
     	
     	
     }
     public Robot() {
     	
     	initRobotDrive = true;
-//    	
 //        UsbCamera cam0 = CameraServer.getInstance().startAutomaticCapture(0);
 //        cam0.setResolution(320, 240);
 //        cam0.setFPS(15);
-//       
-        Timer.delay(0.05);
+    	
     	climbSpeed = 0;
 
 	    JoystickButton pneumaticOpen = new JoystickButton(stick2, Pnematic_Open);
@@ -186,8 +176,6 @@ public class Robot extends SampleRobot {
 	    JoystickButton flyLaunch = new JoystickButton(stick2, FlySpeedLaunch);
 	    JoystickButton flyPlace = new JoystickButton(stick2, FlySpeedPlace);
 	    
-	    
-
 	    flyLaunch.whenPressed(new InstantCommand(){
 	    	@Override
 	    	protected void execute() {
@@ -356,32 +344,341 @@ public class Robot extends SampleRobot {
 		this.drive(.2, 6,  true);
     }
     
+    public void autoSwitch(){
+    	
+    }
+    
+    //commands integrated with gyro, meant to be run in a loop
+    public void gyroDriveStraight() {
+    	double angle = gyro.getAngle(); // get current heading
+    	m_drive.arcadeDrive(0.2, -angle*Kp); // drive towards heading 0
+    }
+    public void gyroTurnLeft(){
+        double angle = gyro.getAngle(); // get current heading
+        double difference = angle - 90;
+        m_drive.arcadeDrive(0.2, difference*Kp); // drive towards heading 0
+    }
+    
+    //facingLeft checker meant to be run in a loop
+    public boolean facingLeft(){
+    	if(gyro.getAngle()>=-89 && gyro.getAngle() <= -91)
+    		return true;
+    	else
+    		return false;
+    }
+    
+    public void gyroTurnRight(){
+    	double angle = gyro.getAngle(); // get current heading
+        double difference = angle + 90;
+        m_drive.arcadeDrive(0.2, difference*Kp); // drive towards heading 0
+    }
+    
+    public boolean facingRight(){
+    	if(gyro.getAngle()>= 89 && gyro.getAngle() <= 91)
+    		return true;
+    	else
+    		return false;
+    }
+    
+    public void gyroTurnAround(){
+    	double angle = gyro.getAngle(); // get current heading
+        double difference = angle + 180;
+        m_drive.arcadeDrive(0.2, difference*Kp); // drive towards heading 0
+    }
+    
+    public boolean facingAround(){
+    	if(gyro.getAngle()>= 179 && gyro.getAngle() <= 181)
+    		return true;
+    	else
+    		return false;
+    }
+    
+    public void leftSideSwitchAuto(){
+    	int step = 1;
+    	long startTime = System.currentTimeMillis();
+    	 gyro.reset();
+         while (isAutonomous()) {
+        	 if((step == 1 && System.currentTimeMillis()-startTime >= 6500)){//time to move forward from base 
+        		 step = 2;
+        	 }
+        	 if(step == 2 && facingLeft()){
+        		 step = 3;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 3 && System.currentTimeMillis()-startTime >= 5000){
+        		 step = 4;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 4 && facingRight()){
+        		 step = 5;
+        	 }
+        	 if(step == 5 && System.currentTimeMillis()-startTime >= 1000){
+        		 step = 6;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 6 && facingAround()){
+        		 step = 7;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 7 && System.currentTimeMillis()-startTime >= 1000){
+        		 step = 8;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 8 && System.currentTimeMillis()-startTime >= 500){
+        		 step = 9;
+        		 startTime = System.currentTimeMillis();
+
+        	 }
+        	 if(step == 9 && System.currentTimeMillis()-startTime >= 1500){
+        		 step = 10;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 10 && System.currentTimeMillis()-startTime >= 1500){
+        		 step = 11; 
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 11 && facingAround()){
+        		 step = 12; 
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 12 && System.currentTimeMillis()-startTime >= 3000){
+        		 step = 13;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 13 && System.currentTimeMillis()-startTime >= 1000){
+        		 step = 14;
+        	 }
+        	 
+        	 
+        	 
+        	 
+        	 ///Steps that occur when conditions are met
+        	 if(step == 1){     		 
+                 gyroDriveStraight();
+        	 }
+        	 if(step == 2){
+        		 gyroTurnLeft(); 
+        	 }
+        	 if(step == 3){
+        		 gyro.reset();
+                 gyroDriveStraight();
+        	 }
+        	 if(step == 4){
+        		 gyroTurnRight();
+        		 Timer.delay(1);
+        	 }
+        	 if(step == 5){ 
+        		 sol1.set(DoubleSolenoid.Value.kForward);
+        		 fly1.set(0.25);
+        		 fly2.set(0.25);
+                 Timer.delay(0.5);
+                 fly1.set(0);
+        		 fly2.set(0);
+        	 }
+        	 if(step == 6){
+        		 gyro.reset();
+        		 gyroTurnAround();
+        		 fly1.set(-0.5);
+        		 fly2.set(-0.5);
+        	 }
+        	 if(step == 7){
+        		 gyro.reset();
+                 gyroDriveStraight();
+        	 }
+        	 if(step == 8){
+        		 sol1.set(DoubleSolenoid.Value.kReverse);
+        		
+        	 }
+        	 if(step == 9){
+        		 gyro.reset();
+                 gyroDriveStraight();
+        		
+        	 }
+        	 if(step == 10){
+        		 fly1.set(1);
+        		 fly2.set(1);
+        	 }
+        	 if(step == 11){
+        		 gyroTurnAround();
+        	 }
+        	 if(step == 12){
+        		 gyro.reset();
+        		 sol1.set(DoubleSolenoid.Value.kForward);
+        		 fly1.set(-0.5);
+        		 fly2.set(-0.5);
+                 gyroDriveStraight();
+        	 }
+        	 if(step == 13){
+        		 fly1.set(-0.18);
+        		 fly2.set(-0.18);
+        		 gyroTurnAround();
+        		 sol1.set(DoubleSolenoid.Value.kReverse);
+        		 gyro.reset();
+                 gyroDriveStraight();
+
+        	 }
+        	 if(step == 14){
+        		 fly1.set(1);
+        		 fly2.set(1);
+        		 
+        	 }
+             Timer.delay(0.004);
+         }
+         this.autoPause(); 
+        	 
+         }
+    	
+    
+    public void rightSideSwitchAuto(){
+    	int step = 1;
+    	long startTime = System.currentTimeMillis();
+    	 gyro.reset();
+         while (isAutonomous()) {
+        	 ///Conditions that must be met to move on to the next step 
+        	 if((step == 1 && System.currentTimeMillis()-startTime >= 5000)){
+        		 step = 2;
+        	 }
+        	 if(step == 2 && facingLeft()){
+        		 step = 3;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 3 && System.currentTimeMillis()-startTime >= 1000){
+        		 step = 4;
+        	 }
+        	 //step 4 to 5 is skipped as it is put in the runtime if statement
+        	 if(step == 5 && facingRight()){
+        		 step = 6;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 6 && System.currentTimeMillis()-startTime >= 2000){
+        		 step = 7;
+        	 }
+        	 if(step == 7 && facingLeft()){
+        		 step = 8;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 8 && System.currentTimeMillis()-startTime >= 1000){
+        		 step = 9;
+        	 }
+        	 if(step == 9 && facingLeft()){
+        		 step = 10;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 10 && System.currentTimeMillis()-startTime >= 1500){
+        		 step = 11; 
+        	 }
+        	 //step == 11 skipped, put in runtime if
+        	 if(step == 12 && System.currentTimeMillis()-startTime >= 1000){
+        		 step = 13;
+        	 }
+        	 
+        	 
+        	 
+        	 
+        	 
+        	 ///Steps that occur when conditions are met
+        	 if(step == 1){     		 
+                 gyroDriveStraight();
+        	 }
+        	 if(step == 2){
+        		 gyroTurnLeft(); 
+        	 }
+        	 if(step == 3){
+        		 gyro.reset();
+                 gyroDriveStraight();
+        	 }
+        	 if(step == 4){
+        		 fly1.set(1);
+        		 fly2.set(1);
+                 Timer.delay(1);
+                 fly1.set(-.18);
+        		 fly2.set(-.18);
+        		 step = 5;
+        	 }
+        	 if(step == 5){
+        		 gyroTurnRight();
+        	 }
+        	 if(step == 6){
+        		 gyro.reset();
+                 gyroDriveStraight();
+        	 }
+        	 if(step == 7){
+        		 gyroTurnLeft();
+        	 }
+        	 if(step == 8){
+        		 gyro.reset();
+                 gyroDriveStraight();
+        	 }
+        	 if(step == 9){
+        		 gyroTurnLeft();
+        		 sol1.set(DoubleSolenoid.Value.kForward);
+        	 }
+        	 if(step == 10){
+        		 fly1.set(-.4);
+        		 fly2.set(-.4);
+        		 gyro.reset();
+                 gyroDriveStraight();
+                 
+        	 }
+        	 if(step == 11){
+        		 sol1.set(DoubleSolenoid.Value.kReverse);
+        		 Timer.delay(1.5);
+        		 fly1.set(1);
+        		 fly2.set(1);
+        		 Timer.delay(1);
+                 fly1.set(-.18);
+        		 fly2.set(-.18);
+        		 step = 12;
+        		 startTime = System.currentTimeMillis();
+        	 }
+        	 if(step == 12){
+        		 sol1.set(DoubleSolenoid.Value.kForward);
+        		 double angle = gyro.getAngle(); // get current heading
+        		 m_drive.arcadeDrive(-0.2, -angle*Kp); // drive towards heading 0
+        	 }
+        	 if(step == 13){
+        		 m_drive.arcadeDrive(0,0); // pause drive
+        	 }
+             Timer.delay(0.004);
+         }
+         this.autoPause();
+      }
+    	
+    
+    
+    
     
     
     /**
      * AUTONOMOUS
      */
     public void autonomous() {
-    	//switch(autoMode) {
-    	
-    	/**
-    	 * L = Left				//B = Baseline/Auto line	T=go to the top one		B=big=scale
-    	 * M = Middle		    //SC = Scale				B=go to the bottom one	S=small=switch
-    	 * R = Right			//SW = Switch
-    	 */
-    	//auto distances & speed 
-//    	double autoSpeed = 0;
-//    	double autoDistance1 = 0; //straight 1 left to scale 
-//    		double autoDistance2 = 0; //striaght 2 
-//    		double autoDistance3 = 0; //
+    	String gameData;
+		gameData = DriverStation.getInstance().getGameSpecificMessage();
+		if(gameData.charAt(0) == 'L'){
+			//this.leftSideSwitchAuto();
+			this.drive(0.2, 5.05, false);
 
-    	this.drive(0.2, 5.1, false);
+		}
+		if(gameData.charAt(0) == 'R'){
+			//this.rightSideSwitchAuto();
+			this.drive(0.2, 5.05, false);
+
+		}
+		else{
+			this.drive(0.2, 5.05, false);
+		}
+
+    
+    	//this.drive(0.2, 5.05, false);
+    	
+      }
     	
 
 		//this.drive(0.5, 1,  false);		
 		
 		
-    	/*
+    	/* 
     	int switchOrScale = 3;
     	//Switch = 0, Scale = 1; // Override = 3;
     	int LMR = 0;
@@ -394,290 +691,21 @@ public class Robot extends SampleRobot {
 	        {
 			 if(gameData.charAt(0) == 'L')
 			  {
-				if (LMR == 0){
-					this.drive(.5, 5,  false);
-					this.turnRight();
-					this.drive(.5, 5,  false);
-					this.stopMotors();
-					this.cleanSet();
-				}
-				else if (LMR == 1){
-					this.drive(.5, 5,  false);
-					this.turnLeft();
-					this.drive(.5, 5,  false);
-					this.turnRight();
-					this.drive(.5, 5,  false);
-					this.turnRight();
-					this.drive(.5, 5,  false);
-					this.stopMotors();
-					this.cleanSet();
-				}
-				else if (LMR == 2){
-					this.drive(.5, 5,  false);
-					this.turnLeft();
-					this.drive(.5, 5,  false);
-					this.turnRight();
-					this.drive(.5, 5,  false);
-					this.turnRight();
-					this.drive(.5, 5,  false);
-					this.stopMotors();
-					this.cleanSet();
-				}
-			  } else {
-				  if (LMR == 0){
-					  this.drive(.5, 5,  false);
-						this.turnRight();
-						this.drive(.5, 5,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.stopMotors();
-						this.cleanSet();
-					}
-					else if (LMR == 1){
-						this.drive(.5, 5,  false);
-						this.turnRight();
-						this.drive(.5, 5,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.stopMotors();
-						this.cleanSet();
-					}
-					else if (LMR == 2){
-						this.drive(.5, 5,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.stopMotors();
-						this.cleanSet();
-					}
-			    }
+			
 	         }
 		}
 		else if (switchOrScale == 1){
 			//NOTE: THE SAME CODE FOR SCALE IS USED HERE. The main difference between the two will be the DISTANCES traveled by the robot.
 			if(gameData.length() > 0)
 	        {
-			 if(gameData.charAt(1) == 'L')
-			  {
-				 if (LMR == 0){
-					 this.drive(.5, autoDistance1,  false);
-						this.turnRight();
-						this.drive(.5, 5,  false);
-						this.stopMotors();
-						this.cleanSet();
-					}
-					else if (LMR == 1){
-						this.drive(.5, 5,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.turnRight();
-						this.drive(.5, 5,  false);
-						this.turnRight();
-						this.drive(.5, 5,  false);
-						this.stopMotors();
-						this.cleanSet();
-					}
-					else if (LMR == 2){
-						this.drive(.5, autoDistance1,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.turnRight();
-						this.drive(.5, 5,  false);
-						this.turnRight();
-						this.drive(.5, 5,  false);
-						this.stopMotors();
-						this.cleanSet();
-					}
-			  } else {
-				  if (LMR == 0){
-					  this.drive(.5, autoDistance1,  false);
-						this.turnRight();
-						this.drive(.5, 5,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.stopMotors();
-						this.cleanSet();
-					}
-					else if (LMR == 1){
-						this.drive(.5, 5,  false);
-						this.turnRight();
-						this.drive(.5, 5,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.stopMotors();
-						this.cleanSet();
-					}
-					else if (LMR == 2){
-						this.drive(.5, autoDistance1,  false);
-						this.turnLeft();
-						this.drive(.5, 5,  false);
-						this.stopMotors();
-						this.cleanSet();
-					}
-			    }
-	         }
-		}
+			 i
 		else if (switchOrScale == 3){
 			this.drive(.3, 10,  false);
 			
 
-		}
-		*/
-    	//
-    	/*
-    		case "LTB":
-    			this.drive(.5, 5,  false);
-    			//figure out those dashes later--> the first one is speed, the second one is time, and don't screw with the third one
-    			this.turnLeft();
-    			this.drive(-, -,  false);
-    			this.turnRight();
-    			this.drive(-, -,  false);
-    			//this.crossBaseLineLR();
-    			this.stopMotors();
-    			break;
-    		case "MTB":
-    			//this.crossBaseLineM();
-    			this.drive(-, -,  false);
-    			this.turnLeft();
-    			this.drive(-, -,  false);
-    			this.turnRight();
-    			this.drive(-, -,  false);
-    			this.stopMotors();
-    			break;
-    		case "RTB":
-    			this.drive(-, -,  false);
-    			this.turnLeft();
-    			this.drive(-, -,  false);
-    			this.turnRight();
-    			this.drive(-, -,  false);
-    			//this.crossBaseLineLR();
-    			this.stopMotors();
-    			break;
-    		case "LBB":
-    			this.drive(-, -,  false);
-    			this.turnRight();
-    			this.drive(-, -,  false);
-    			this.turnLeft();
-    			this.drive(-, -,  false);
-    			this.stopMotors();
-    			break;
-    		case "MBB":
-    			this.drive(-, -,  false);
-    			this.turnRight();
-    			this.drive(-, -,  false);
-    			this.turnLeft();
-    			this.drive(-, -,  false);
-    			this.stopMotors();
-    			break;
-    		case "RBB":
-    			this.drive(-, -,  false);
-    			this.turnRight();
-    			this.drive(-, -,  false);
-    			this.turnLeft();
-    			this.drive(-, -,  false);
-    			this.stopMotors();
-    			break;
-    		////////////////////////////////////////////////
-    		case "LTS":
-    			this.drive(-, -,  false);
-    			this.turnRight();
-    			this.drive(-, -,  false);
-    			this.stopMotors();
-    			break;
-    		case "MTS":
-    			//this.crossBaseLineM();
-    			this.drive(-, -,  false);
-    			this.turnLeft();
-    			this.drive(-, -,  false);
-    			this.turnRight();
-    			this.drive(-, -,  false);
-    			this.stopMotors();
-    			break;
-    		case "RTS":
-    			this.drive(-, -,  false);
-    			this.turnLeft();
-    			this.drive(-, -,  false);
-    			this.turnRight();
-    			this.drive(-, -,  false);
-    			//this.crossBaseLineLR();
-    			this.stopMotors();
-    			break;
-    		case "LBS":
-    			this.drive(-, -,  false);
-    			this.turnRight();
-    			this.drive(-, -,  false);
-    			this.turnLeft();
-    			this.drive(-, -,  false);
-    			this.stopMotors();
-    			break;
-    		case "MBS":
-    			this.drive(-, -,  false);
-    			this.turnRight();
-    			this.drive(-, -,  false);
-    			this.turnLeft();
-    			this.drive(-, -,  false);
-    			this.stopMotors();
-    			break;
-    		case "RBS":
-    			this.drive(-, -,  false);
-    			this.turnLeft();
-    			this.drive(-, -,  false);
-    			this.stopMotors();
-    			break;
-//    		case 
- */
- 
-//    		/**
-//    		 * Case for robot to cross baseline in auto (maybe not tested thoroughly), causes from to drive approximately 80-85 inches (unsure of precise measurement)
-//    		 */
-//    		/**
-//    		 * ^^ might want to figure out a way to implement PID so that we can use rpm or distance to travel instead
-//    		 * might also want to look into 
-//    		 * MAKE SURE TO IMPLEMENT LINE OF CODE THAT WILL DETERMINE WHICH SIDE OF THE SCALE/SWITCH IS OURS !!!!
-//    	 	 */
-//    	
-//    		case "M2":
-//    			this.drive(0.4, 0.95, false);
-//    			this.drive(0.2, 0.91, false);
-//    			this.stopMotors();
-//    			Timer.delay(1.0);
-////    			this.openGearMechDoor();
-//    			this.drive(0.1, 1.0, true);
-//    			this.stopMotors();
-////    			this.closeGearMechDoor();
-//    			break;
-//    		//**
-//    		 // Method for robot to cross baseline in auto, causes robot to drive approximate 130 inches (unsure of precise measurement)
-//    		 //*
-//    		case "M3":
-//    			this.drive(0.4, 2.0, false);
-//    			this.stopMotors();
-//    			break;
-//
-//       		/*
-//    		 case :
-//    		 	this.drive(0.4, , false);
-//    		 	this.turnRight();
-//    		 	this.drive(0.4, , false);
-//    		 	//insert code for mechanism to pick up box
-//    		 	
-//    		 */
-//    		default:
-//    			this.stopMotors();
-//    			break;
-    	
+		}    	
     		
     	
-    
-    	//}	switch bracket
-    }
     
     /**
      * TELEOPERATED MODE. Runs the motors with arcade steering.
@@ -686,10 +714,12 @@ public class Robot extends SampleRobot {
     	// code to initialize RobotDrive in tele op mode
     	
    
-    	if(initRobotDrive || arcadeDrive.equals(null)) {
+    	if(initRobotDrive || m_drive.equals(null)) {
 //        	arcadeDrive = new RobotDrive(front_Left, back_Left, front_Right, back_Right);
 //        	arcadeDrive.setSafetyEnabled(false);
+    		m_drive = new DifferentialDrive(m_Left, m_Right);
         	System.out.println("robotDrive initialize");
+        	//arcadeDrive = new RobotDrive(fLeft, bLeft, fRight, bRight);
         	initRobotDrive = false;
         }
     	
@@ -697,17 +727,17 @@ public class Robot extends SampleRobot {
     	while (isOperatorControl() && isEnabled()) {
     		//programs motor controllers to drive with exponential arcade drive (i.e. real values are dampened by exponentiation to make driving smoother)
         	boolean slow = stick.getRawButton(SlowHold);
-    		if (slow){
-    			expY = (Math.pow(-stick.getY(), 1))/1.5;
-        		expX = (Math.pow(-stick.getX(), 1))/1.5;
-    		} else {
+    		if (!slow){
+    			expY = (Math.pow(-stick.getY(), 1))/1.8;
+        		expX = (Math.pow(-stick.getX(), 1))/1.8;
+    		} else if (slow) {
     			expY = Math.pow(-stick.getY(), 1);
     			expX = Math.pow(-stick.getX(), 1);
     		}
     		
     		//arcadeDrive.arcadeDrive(expY, expX);
     		
-    		m_drive.arcadeDrive(expX,expY,true);
+    	   	m_drive.arcadeDrive(expY,-expX,true);
     		
              expX = 0;
              expY = 0;
@@ -729,25 +759,30 @@ public class Robot extends SampleRobot {
         
         	
         	// determines whether the POV hat switch is set to correct state to trigger events for climbing
-        	boolean accelerateforkLiftMech = stick2.getY() <= -0.2 ? true : false;
-        	boolean decceraateforkLiftMech = stick2.getY() >= 0.2 ? true : false;
+        	boolean accelerateforkLiftMech = stick2.getY() <= 0.02 ? true : false;
+        	boolean decceraateforkLiftMech = stick2.getY() >= 0.02 ? true : false;
         	
-        	
+        	output = stick2.getY();
     		// if the DISABLE_LIFT button is pressed, stop the climbing mech motor
         	if (disableLiftMotor) {
         		forkLiftMech.stopMotor();
         	}
+        	if (forwardLimitSwitch.get()){
+        		output = Math.min(output, 0);
+        	}
+        		
         	
         	// if the POV stick (hat switch) is moved to the forward position, accelerate the climbing mech motor
         	if (accelerateforkLiftMech) {
-			    climbSpeed += 0.001;
-        		forkLiftMech.set(climbSpeed); //don't know what to set this to
+//			    climbSpeed = 0.6;
+        		forkLiftMech.set(output); //don't know what to set this to
 		    	}
         	
         	// if the POV stick (hat switch) is moved to the forward position, decelerate the climbing mech motor
         	if (decceraateforkLiftMech) {
-        		climbSpeed -= 0.001;
-        		forkLiftMech.set(climbSpeed);
+//        		climbSpeed = -0.4;
+        		forkLiftMech.set(output); //don't know what to set this to
+
         	}
         	
         	if(flywheelsOn && launchCube) {
@@ -775,7 +810,7 @@ public class Robot extends SampleRobot {
         	
         	
         	Scheduler.getInstance().run();
-    	    Timer.delay(0.005);		// wait for a motor update time
+    	    Timer.delay(0.0005);		// wait for a motor update time
         }
     }
 
