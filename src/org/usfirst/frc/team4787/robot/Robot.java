@@ -62,9 +62,9 @@ public class Robot extends SampleRobot {
 	final int FlySpeedPlace = 10;	//stick 2
 
 	//motor speeds 
-	double flywheelSpeed = 0.4;
+	double flywheelSpeed = 0.9;
     double flywheelSpeedLaunch = 1;
-    double flywheelSpeedIntake = 0.7;
+    double flywheelSpeedIntake = 0.9;
 	double Kp = 0.03;
 
 	//boolean for certain mechanisms
@@ -662,33 +662,71 @@ public class Robot extends SampleRobot {
      * AUTONOMOUS
      */
     public void autonomous() {
-//    	boolean running = true;
-//    	long start = System.currentTimeMillis();
-//    	while(running){
-//    		this.drive(0.3, 0, false);
-//    		if((System.currentTimeMillis() - start) >= 3000){
-//    			running = false;
-//    		}
-//    	}
     	
-    	this.drive(0.4, 1, false);
-    	System.out.println("eat");
-    	this.drive(0.4, 1, false);
-    	System.out.println("my");
-    	this.drive(0.4, 1, false);
-    	System.out.println("ass");
-    	this.drive(0.4, 1, false);
-    	System.out.println("eat");
-    	this.drive(0.4, 1, false);
-    	this.drive(0.4, 1, false);
-    	System.out.println("eat");
-    	this.drive(0.4, 1, false);
-    	this.drive(0.4, 1, false);
-    	System.out.println("eat");
-    	this.drive(0.4, 1, false);
-    	this.drive(0.4, 1, false);
-    	System.out.println("eat");
-
+    	//String gameData;
+    	//gameData = DriverStation.getInstance().getGameSpecificMessage();
+		//if(gameData.charAt(0) == 'L'){
+			
+		//}
+    	//else if(gameData.charAt(0) == 'R'){
+    		
+    	//}
+    	boolean running = true;
+    	boolean running2 = false;
+    	boolean running3 = false;
+    	
+    	long start = System.currentTimeMillis();
+    	while(running){
+    		this.drive(0.2, 0, false);
+    		if((System.currentTimeMillis() - start) >= 200){
+    			running = false;
+    			running2 = true; 
+    		}
+    	}
+		sol1.set(DoubleSolenoid.Value.kForward);
+    	long start2 = System.currentTimeMillis();
+    	while(running2){
+        	forkLiftMech.set(-0.5);
+    		this.drive(0.2, 0, false);
+    		if((System.currentTimeMillis() - start2) >= 5000){
+    			running2 = false;
+    			running3 = true;
+            	forkLiftMech.set(0);
+            	fly1.set(0.5);
+            	fly2.set(0.5);
+    		}
+    	}
+    	
+    	long start3 = System.currentTimeMillis();
+    	while(running3){
+    		this.drive(0.2, 0, true);
+    		if((System.currentTimeMillis() - start3) >= 1500){
+    			running3 = false;
+    			fly1.set(0);
+    			fly2.set(0);
+    		}
+    	}
+    	
+    	
+//    	this.drive(0.4, 1, false);
+//    	System.out.println("eat");
+//    	this.drive(0.4, 1, false);
+//    	System.out.println("my");
+//    	this.drive(0.4, 1, false);
+//    	System.out.println("ass");
+//    	this.drive(0.4, 1, false);
+//    	System.out.println("eat");
+//    	this.drive(0.4, 1, false);
+//    	this.drive(0.4, 1, false);
+//    	System.out.println("eat");
+//    	this.drive(0.4, 1, false);
+//    	this.drive(0.4, 1, false);
+//    	System.out.println("eat");
+//    	this.drive(0.4, 1, false);
+//    	this.drive(0.4, 1, false);
+//    	System.out.println("eat");
+//    	this.drive(0.4, 1, false);
+//    	this.drive(0.4, 1, false);
     	
 
     	
@@ -790,7 +828,7 @@ public class Robot extends SampleRobot {
     		
     		//arcadeDrive.arcadeDrive(expY, expX);
     		
-    	   	m_drive.arcadeDrive(expY,-expX,true);
+    	   	m_drive.arcadeDrive(expY,-expX,false);
     		
              expX = 0;
              expY = 0;
@@ -816,6 +854,7 @@ public class Robot extends SampleRobot {
         	boolean decceraateforkLiftMech = stick2.getY() >= 0.01 ? true : false;
         	
         	output = stick2.getY();
+        	
     		// if the DISABLE_LIFT button is pressed, stop the climbing mech motor
         	if (disableLiftMotor) {
         		forkLiftMech.stopMotor();
