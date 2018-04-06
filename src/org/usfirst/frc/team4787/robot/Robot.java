@@ -265,9 +265,18 @@ public class Robot extends SampleRobot {
 		back_Right.set(-speed);
 		front_Right.set(-speed);
 		Timer.delay(time);
-		this.autoPause();
+		//this.autoPause();
 		
 		//ok this one is also moving forward, but you at least have some factors that tell the robot how to move as a parameter
+    }
+    
+    public void autoDrive(double speed, boolean isReverse){
+    	speed = isReverse ? -speed : speed;
+		back_Left.set(speed);
+		front_Left.set(speed);
+		back_Right.set(-speed);
+		front_Right.set(-speed);
+		Timer.delay(1);
     }
     
     
@@ -653,6 +662,39 @@ public class Robot extends SampleRobot {
      * AUTONOMOUS
      */
     public void autonomous() {
+//    	boolean running = true;
+//    	long start = System.currentTimeMillis();
+//    	while(running){
+//    		this.drive(0.3, 0, false);
+//    		if((System.currentTimeMillis() - start) >= 3000){
+//    			running = false;
+//    		}
+//    	}
+    	
+    	this.drive(0.4, 1, false);
+    	System.out.println("eat");
+    	this.drive(0.4, 1, false);
+    	System.out.println("my");
+    	this.drive(0.4, 1, false);
+    	System.out.println("ass");
+    	this.drive(0.4, 1, false);
+    	System.out.println("eat");
+    	this.drive(0.4, 1, false);
+    	this.drive(0.4, 1, false);
+    	System.out.println("eat");
+    	this.drive(0.4, 1, false);
+    	this.drive(0.4, 1, false);
+    	System.out.println("eat");
+    	this.drive(0.4, 1, false);
+    	this.drive(0.4, 1, false);
+    	System.out.println("eat");
+
+    	
+
+    	
+
+    	
+
     	/*String gameData;
 		gameData = DriverStation.getInstance().getGameSpecificMessage();
 		if(gameData.charAt(0) == 'L'){
@@ -681,7 +723,8 @@ public class Robot extends SampleRobot {
     
     	//this.drive(0.2, 5.05, false);
     */	
-    	this.drive(0.6, 5.05, false);
+    	//this.drive(0.6, 600, false);
+    	
       }
     	
 
