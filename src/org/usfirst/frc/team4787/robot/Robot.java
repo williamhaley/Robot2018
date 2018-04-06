@@ -653,7 +653,7 @@ public class Robot extends SampleRobot {
      * AUTONOMOUS
      */
     public void autonomous() {
-    	String gameData;
+    	/*String gameData;
 		gameData = DriverStation.getInstance().getGameSpecificMessage();
 		if(gameData.charAt(0) == 'L'){
 			//this.leftSideSwitchAuto();
@@ -662,7 +662,16 @@ public class Robot extends SampleRobot {
 		}
 		if(gameData.charAt(0) == 'R'){
 			//this.rightSideSwitchAuto();
+			//this.liftUp();
+	    	//this.stopLift();
 			this.drive(0.2, 5.05, false);
+			//sol1.set(DoubleSolenoid.Value.kReverse);
+   		 	//Timer.delay(1.5);
+   		 	//fly1.set(1);
+   		 	//fly2.set(1);
+   		 	//Timer.delay(1);
+            //fly1.set(-.18);
+   		 	//fly2.set(-.18);
 
 		}
 		else{
@@ -671,7 +680,8 @@ public class Robot extends SampleRobot {
 
     
     	//this.drive(0.2, 5.05, false);
-    	
+    */	
+    	this.drive(0.6, 5.05, false);
       }
     	
 
@@ -759,17 +769,17 @@ public class Robot extends SampleRobot {
         
         	
         	// determines whether the POV hat switch is set to correct state to trigger events for climbing
-        	boolean accelerateforkLiftMech = stick2.getY() <= 0.02 ? true : false;
-        	boolean decceraateforkLiftMech = stick2.getY() >= 0.02 ? true : false;
+        	boolean accelerateforkLiftMech = stick2.getY() <= 0.01 ? true : false;
+        	boolean decceraateforkLiftMech = stick2.getY() >= 0.01 ? true : false;
         	
         	output = stick2.getY();
     		// if the DISABLE_LIFT button is pressed, stop the climbing mech motor
         	if (disableLiftMotor) {
         		forkLiftMech.stopMotor();
         	}
-        	if (forwardLimitSwitch.get()){
-        		output = Math.min(output, 0);
-        	}
+//        	if (forwardLimitSwitch.get()){
+//        		output = Math.min(output, 0);
+//        	}
         		
         	
         	// if the POV stick (hat switch) is moved to the forward position, accelerate the climbing mech motor
@@ -795,8 +805,8 @@ public class Robot extends SampleRobot {
         		fly1.set(-flywheelSpeedLaunch);
         		fly2.set(-flywheelSpeedLaunch);
         	}else if (stopFlyWheels){
-        		fly1.set(-0.18);
-        		fly2.set(-0.18);
+        		fly1.set(-0.5);
+        		fly2.set(-0.5);
         	}
         	
         	
