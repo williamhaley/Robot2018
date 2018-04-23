@@ -671,62 +671,62 @@ public class Robot extends SampleRobot {
     	//else if(gameData.charAt(0) == 'R'){
     		
     	//}
-    	boolean running = true;
-    	boolean running2 = false;
-    	boolean running3 = false;
+//    	boolean running = true;
+//    	boolean running2 = false;
+//    	boolean running3 = false;
+//    	
+//    	long start = System.currentTimeMillis();
+//    	while(running){
+//    		this.drive(0.2, 0, false);
+//    		if((System.currentTimeMillis() - start) >= 200){
+//    			running = false;
+//    			running2 = true; 
+//    		}
+//    	}
+//		sol1.set(DoubleSolenoid.Value.kForward);
+//    	long start2 = System.currentTimeMillis();
+//    	while(running2){
+//        	forkLiftMech.set(-0.5);
+//    		this.drive(0.2, 0, false);
+//    		if((System.currentTimeMillis() - start2) >= 5000){
+//    			running2 = false;
+//    			running3 = true;
+//            	forkLiftMech.set(0);
+//            	fly1.set(0.5);
+//            	fly2.set(0.5);
+//    		}
+//    	}
+//    	
+//    	long start3 = System.currentTimeMillis();
+//    	while(running3){
+//    		this.drive(0.2, 0, true);
+//    		if((System.currentTimeMillis() - start3) >= 1500){
+//    			running3 = false;
+//    			fly1.set(0);
+//    			fly2.set(0);
+//    		}
+//    	}
     	
-    	long start = System.currentTimeMillis();
-    	while(running){
-    		this.drive(0.2, 0, false);
-    		if((System.currentTimeMillis() - start) >= 200){
-    			running = false;
-    			running2 = true; 
-    		}
-    	}
-		sol1.set(DoubleSolenoid.Value.kForward);
-    	long start2 = System.currentTimeMillis();
-    	while(running2){
-        	forkLiftMech.set(-0.5);
-    		this.drive(0.2, 0, false);
-    		if((System.currentTimeMillis() - start2) >= 5000){
-    			running2 = false;
-    			running3 = true;
-            	forkLiftMech.set(0);
-            	fly1.set(0.5);
-            	fly2.set(0.5);
-    		}
-    	}
     	
-    	long start3 = System.currentTimeMillis();
-    	while(running3){
-    		this.drive(0.2, 0, true);
-    		if((System.currentTimeMillis() - start3) >= 1500){
-    			running3 = false;
-    			fly1.set(0);
-    			fly2.set(0);
-    		}
-    	}
-    	
-    	
-//    	this.drive(0.4, 1, false);
-//    	System.out.println("eat");
-//    	this.drive(0.4, 1, false);
-//    	System.out.println("my");
-//    	this.drive(0.4, 1, false);
-//    	System.out.println("ass");
-//    	this.drive(0.4, 1, false);
-//    	System.out.println("eat");
-//    	this.drive(0.4, 1, false);
-//    	this.drive(0.4, 1, false);
-//    	System.out.println("eat");
-//    	this.drive(0.4, 1, false);
-//    	this.drive(0.4, 1, false);
-//    	System.out.println("eat");
-//    	this.drive(0.4, 1, false);
-//    	this.drive(0.4, 1, false);
-//    	System.out.println("eat");
-//    	this.drive(0.4, 1, false);
-//    	this.drive(0.4, 1, false);
+    	this.drive(0.4, 1, false);
+    	System.out.println("eat");
+    	this.drive(0.4, 1, false);
+    	System.out.println("my");
+    	this.drive(0.4, 1, false);
+    	System.out.println("ass");
+    	this.drive(0.4, 1, false);
+    	System.out.println("eat");
+    	this.drive(0.4, 1, false);
+    	this.drive(0.4, 1, false);
+    	System.out.println("eat");
+    	this.drive(0.4, 1, false);
+    	this.drive(0.4, 1, false);
+    	System.out.println("eat");
+    	this.drive(0.4, 1, false);
+    	this.drive(0.4, 1, false);
+    	System.out.println("eat");
+    	this.drive(0.4, 1, false);
+    	this.drive(0.4, 1, false);
     	
 
     	
